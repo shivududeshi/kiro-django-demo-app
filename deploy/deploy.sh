@@ -25,6 +25,10 @@ fi
 "${VENV_DIR}/bin/pip" install --upgrade pip --quiet
 "${VENV_DIR}/bin/pip" install -r "${APP_DIR}/requirements.txt" --quiet
 
+echo ">>> [2b] Running Django migrations..."
+cd "${APP_DIR}"
+"${VENV_DIR}/bin/python" manage.py migrate --noinput
+
 echo ">>> [3/4] Restarting application service..."
 sudo systemctl restart "${SERVICE_NAME}"
 
