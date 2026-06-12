@@ -86,6 +86,9 @@ EOF
                         ${IMAGE_NAME}:${IMAGE_TAG}
                 """
 
+                // Run Django migrations (creates django_session, auth tables, etc.)
+                sh 'docker exec ${CONTAINER_NAME} python manage.py migrate --noinput'
+
                 // Health check — wait up to 90s for /health to return 200
                 sh '''
                     echo "Waiting for django-demo-app to be healthy..."
