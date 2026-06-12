@@ -1,3 +1,1 @@
-import pymysql
-
-pymysql.install_as_MySQLdb()
+# mysqlclient is used — no PyMySQL shim needed
