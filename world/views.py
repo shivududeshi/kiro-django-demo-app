@@ -128,7 +128,7 @@ def login_validate(request):
         result = {"success": False, "message": "please signup"}
         return JsonResponse(result)
 
-    login(request, user)
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     result = {"success": True, "message": "login succeeded"}
     return JsonResponse(result)
 

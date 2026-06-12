@@ -6,10 +6,19 @@
 # Core framework (upgraded from 1.11.29 — EOL, incompatible with Py 3.12)
 Django==4.2.13
 
+# Production WSGI server (replaces runserver)
+gunicorn==22.0.0
+
+# Environment variable loading from .env file
+python-dotenv==1.0.1
+
 # Database driver
-# mysqlclient upgraded from 1.4.2.post1 (too old, won't compile on Py 3.12)
-mysqlclient==2.2.4
-# PyMySQL kept as fallback pure-python driver
+# mysqlclient requires libmysqlclient-dev system headers — install with:
+#   sudo apt install python3-dev default-libmysqlclient-dev build-essential
+# Uncomment below once headers are available:
+# mysqlclient==2.2.4
+
+# PyMySQL: pure-Python MySQL driver, no system headers needed
 PyMySQL==1.1.1
 
 # Search (upgraded from 2.8.1 — incompatible with Django 4.x)

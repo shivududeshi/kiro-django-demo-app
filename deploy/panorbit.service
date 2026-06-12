@@ -1,0 +1,34 @@
+# Systemd service file for Gunicorn / Panorbit Django app
+# Place at: /etc/systemd/system/panorbit.service
+#
+# Then run:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable panorbit
+#   sudo systemctl start panorbit
+
+[Unit]
+Description=Panorbit Django App (Gunicorn)
+After=network.target mysql.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/simple-django-project
+
+# Load environment variables from .env file
+EnvironmentFile=/path/to/simple-django-project/.env
+
+# Activate virtualenv and start gunicorn
+ExecStart=/path/to/simple-django-project/envs/bin/gunicorn \
+          --config /path/to/simple-django-project/gunicorn.conf.py \
+          panorbit.wsgi:application
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
