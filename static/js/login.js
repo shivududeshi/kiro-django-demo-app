@@ -13,7 +13,11 @@ $DOM.on('click', '#send_otp', function() {
         success: function(result) {
             console.log(result);
             alertify.set('notifier', 'position', 'top-right');
-            alertify.success("OTP sent to your email");
+            if (result.success) {
+                alertify.success("OTP sent to your email");
+            } else {
+                alertify.error(result.message);
+            }
         },
         error: function(xhr) {
             alertify.set('notifier', 'position', 'top-right');
