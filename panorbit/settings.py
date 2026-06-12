@@ -5,18 +5,24 @@ Upgraded to Django 4.2 LTS / Python 3.12 compatible.
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# Load .env file if it exists (local development)
+load_dotenv(Path(__file__).resolve().parent.parent / '.env')
 
 # Build paths using pathlib (replaces os.path pattern from Django 1.x)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '3xb%+*2uex+%1&$@=*+(@^atnm!#tz-n&i5qn$o46jnp&u*2l^'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'change-me-in-production')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DEBUG=True for local development
+# Override with DJANGO_DEBUG=False in production via environment variable
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ["c9ae666b.ngrok.io", "localhost"]
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 0.0.0.0').split()
 
 
 # Application definition
@@ -77,11 +83,11 @@ WSGI_APPLICATION = 'panorbit.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'world',
-        'USER': 'root',
-        'PASSWORD': 'xxxx',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': os.environ.get('DB_NAME', 'world'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
     }
 }
 
@@ -98,13 +104,13 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
-# USE_L10N removed — deprecated in Django 4.0, defaults to True
 USE_TZ = True
 
 
 # Static files
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
@@ -113,11 +119,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 AUTH_USER_MODEL = 'world.User'
 
 # Login URL
-LOGIN_URL = 'signup'
+LOGIN_URL = 'login'
 
-# Email configurations
+# Email configuration
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend'
+)
 EMAIL_USE_TLS = True
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'xxxx'
-EMAIL_HOST_PASSWORD = 'xxxx'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_PORT = 587
