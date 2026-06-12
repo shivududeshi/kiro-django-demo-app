@@ -11,16 +11,16 @@ Description=Panorbit Django App (Gunicorn)
 After=network.target mysql.service
 
 [Service]
-User=www-data
-Group=www-data
-WorkingDirectory=/path/to/simple-django-project
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/var/www/kiro-django-demo-app
 
 # Load environment variables from .env file
-EnvironmentFile=/path/to/simple-django-project/.env
+EnvironmentFile=/var/www/kiro-django-demo-app/.env
 
 # Activate virtualenv and start gunicorn
-ExecStart=/path/to/simple-django-project/envs/bin/gunicorn \
-          --config /path/to/simple-django-project/gunicorn.conf.py \
+ExecStart=/var/www/kiro-django-demo-app/envs/bin/gunicorn \
+          --config /var/www/kiro-django-demo-app/gunicorn.conf.py \
           panorbit.wsgi:application
 
 ExecReload=/bin/kill -s HUP $MAINPID
