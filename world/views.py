@@ -159,3 +159,8 @@ def get_country_details(request, country_name):
     
     return render(request, "country.html", result)
 
+
+def health(request):
+    """Public health check endpoint — no authentication required."""
+    return JsonResponse({"status": "UP"})
+

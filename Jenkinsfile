@@ -1,58 +1,59 @@
 pipeline {
-    agent { label 'petclinic-agent' }
+    agent any
 
     environment {
-        GITHUB_REPO  = 'https://github.com/shivududeshi/kiro-django-demo-app'
-        BRANCH       = 'master'
-        APP_DIR      = '/var/www/kiro-django-demo-app'
-        VENV_DIR     = "${APP_DIR}/envs"
-        PYTHON       = '/usr/bin/python3.12'
-        SERVICE_NAME = 'kiro-django-demo-app'
+        IMAGE_NAME     = 'django-demo-app'
+        IMAGE_TAG      = 'latest'
+        CONTAINER_NAME = 'django-demo-app'
+        NETWORK        = 'petclinic-net'
+        HOST_PORT      = '8000'
+        CONTAINER_PORT = '8000'
     }
 
     stages {
 
-        // ── Stage 1: Get Code ────────────────────────────────────────────────
+        // ────────────────────────────────────────────────────────────
+        // Stage 1 — Checkout source code
+        // ────────────────────────────────────────────────────────────
         stage('get_code') {
             steps {
-                echo '>>> Checking out source code from GitHub...'
-                git branch: "${BRANCH}",
-                    url: "${GITHUB_REPO}"
-                sh 'git log --oneline -3'
+                checkout scm
             }
         }
 
-        // ── Stage 2: Build ───────────────────────────────────────────────────
+        // ────────────────────────────────────────────────────────────
+        // Stage 2 — Build Docker image
+        // ────────────────────────────────────────────────────────────
         stage('build') {
             steps {
-                echo '>>> Creating virtual environment...'
                 sh """
-                    if [ ! -d "${VENV_DIR}" ]; then
-                        ${PYTHON} -m venv ${VENV_DIR}
-                    fi
-                    ${VENV_DIR}/bin/pip install --upgrade pip --quiet
-                """
-
-                echo '>>> Installing requirements...'
-                sh """
-                    ${VENV_DIR}/bin/pip install -r ${WORKSPACE}/requirements.txt --quiet
-                """
-
-                echo '>>> Running Django system check...'
-                sh """
-                    cd ${WORKSPACE}
-                    ${VENV_DIR}/bin/python manage.py check
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                 """
             }
         }
 
-        // ── Stage 3: Deploy ──────────────────────────────────────────────────
+        // ────────────────────────────────────────────────────────────
+        // Stage 3 — Deploy container
+        // ────────────────────────────────────────────────────────────
         stage('deploy') {
             steps {
-                echo '>>> Deploying application...'
                 sh """
-                    chmod +x ${WORKSPACE}/deploy/deploy.sh
-                    ${WORKSPACE}/deploy/deploy.sh
+                    # Stop existing container if running
+                    docker stop ${CONTAINER_NAME} || true
+
+                    # Remove existing container if present
+                    docker rm ${CONTAINER_NAME} || true
+
+                    # Run new container on the existing petclinic-net network
+                    docker run -d \\
+                        --name ${CONTAINER_NAME} \\
+                        --network ${NETWORK} \\
+                        -p ${HOST_PORT}:${CONTAINER_PORT} \\
+                        --env-file .env \\
+                        ${IMAGE_NAME}:${IMAGE_TAG}
+
+                    # Verify the container is up
+                    docker ps --filter name=${CONTAINER_NAME}
                 """
             }
         }
@@ -60,10 +61,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Build SUCCESS — application is running on port 8000'
+            echo "Deployment successful — django-demo-app is running on port 8000"
         }
         failure {
-            echo '❌ Build FAILED — check the logs above'
+            echo "Deployment failed — check the logs above"
         }
     }
 }
