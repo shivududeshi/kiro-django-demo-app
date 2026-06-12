@@ -1,60 +1,23 @@
 # ============================================================
-# requirements.txt — Python 3.12 compatible
-# Upgraded from Python 3.7.2 / Django 1.11
+# requirements.txt — Python 3.12 / Django 4.2 / mysqlclient
 # ============================================================
 
-# Core framework (upgraded from 1.11.29 — EOL, incompatible with Py 3.12)
+# Core framework
 Django==4.2.13
 
-# Database driver
-# mysqlclient upgraded from 1.4.2.post1 (too old, won't compile on Py 3.12)
-mysqlclient==2.2.4
-# PyMySQL kept as fallback pure-python driver
-PyMySQL==1.1.1
+# Production WSGI server
+gunicorn==22.0.0
 
-# Search (upgraded from 2.8.1 — incompatible with Django 4.x)
+# Environment variable loading
+python-dotenv==1.0.1
+
+# MySQL driver (production — requires default-libmysqlclient-dev system headers)
+mysqlclient==2.2.4
+
+# Search backend
 django-haystack==3.3.0
 Whoosh==2.7.4
 
-# Phone number field (upgraded from 2.2.0 — incompatible with Django 4.x)
+# Phone number field
 django-phonenumber-field==7.3.0
 phonenumbers==8.13.39
-
-# Cryptography (upgraded from 2.5 — won't build on Py 3.12)
-cryptography==42.0.8
-
-# HTTP / networking
-requests==2.32.3
-urllib3==2.2.2
-certifi==2024.6.2
-idna==3.7
-chardet==5.2.0
-
-# Auth
-oauthlib==3.2.2
-requests-oauthlib==2.0.0
-PyJWT==2.8.0
-
-# Date/time
-python-dateutil==2.9.0.post0
-pytz==2024.1
-
-# XML / spreadsheet
-lxml==5.2.2
-openpyxl==3.1.5
-
-# REMOVED packages (reasons below):
-# enum34       — Python 2 backport; breaks on Python 3.12 (stdlib enum is used)
-# six          — Python 2/3 compat shim; not needed in Python 3.12
-# future       — Python 2/3 compat shim; not needed in Python 3.12
-# configparser — Python 2 backport; stdlib in Python 3
-# pyOpenSSL    — not directly imported by this project
-# PySocks      — not directly imported by this project
-# asn1crypto   — pulled in transitively by cryptography if needed
-# cffi         — pulled in transitively by cryptography if needed
-# pycparser    — pulled in transitively by cffi if needed
-# Babel        — not used in this project
-# protobuf     — not used in this project
-# et-xmlfile   — pulled in transitively by openpyxl
-# jdcal        — pulled in transitively by openpyxl (older versions)
-# xlrd         — not used in this project (openpyxl handles xlsx)
