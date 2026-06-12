@@ -1,15 +1,5 @@
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey has `on_delete` set to the desired behavior.
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
-
-from __future__ import unicode_literals
-
 from django.db import models
-from django.contrib.auth.models import AbstractUser, AbstractBaseUser, BaseUserManager, UserManager
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -59,8 +49,9 @@ class Countrylanguage(models.Model):
         db_table = 'countrylanguage'
         unique_together = (('countrycode', 'language'),)
 
-    def __unicode__(self):
-        return ("country-code: %s language: %s") % (self.countrycode.name, self.language)
+    def __str__(self):
+        # Replaced Python 2 __unicode__ with __str__ for Python 3 compatibility
+        return "country-code: %s language: %s" % (self.countrycode.name, self.language)
 
 
 class DjangoMigrations(models.Model):
@@ -82,7 +73,7 @@ class MyCustomUserManager(BaseUserManager):
             raise ValueError('Users must have an email address')
 
         user = self.model(
-            email=MyCustomUserManager.normalize_email(email_id),
+            email=self.normalize_email(email_id),
             first_name=first_name,
             last_name=last_name,
         )
@@ -92,7 +83,12 @@ class MyCustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password, first_name, last_name=None):
-        u = self.create_user(email_id=email, password=password, first_name=first_name, last_name=last_name)
+        u = self.create_user(
+            email_id=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+        )
         u.is_superuser = True
         u.is_staff = True
         u.save(using=self._db)
