@@ -1,176 +1,127 @@
-# Jenkins Job Setup Guide
+# Jenkins CI/CD Setup Guide — kiro-django-demo-app
 
-Jenkins URL: http://13.201.40.146:8080/
+## Prerequisites (one-time server setup)
 
----
+> **Important:** The Jenkins agent must be configured to run as the `ubuntu` user.
+> All deployment commands run directly as `ubuntu` — no `sudo`, no separate jenkins user.
 
-## Pre-requisites on the server (run once as ubuntu user)
+Run these commands on the Ubuntu server **before** the first Jenkins build.
 
 ```bash
-# 1. Create app directory
+# 1. Create the app directory (ubuntu already owns it)
 sudo mkdir -p /var/www/kiro-django-demo-app
-sudo chown ubuntu:ubuntu /var/www/kiro-django-demo-app
+sudo chown -R ubuntu:ubuntu /var/www/kiro-django-demo-app
 
-# 2. Create log directory for Gunicorn
-sudo mkdir -p /var/log/panorbit
-sudo chown ubuntu:ubuntu /var/log/panorbit
-
-# 3. Copy systemd service file
-sudo cp /var/www/kiro-django-demo-app/deploy/panorbit.service /etc/systemd/system/
+# 2. Install the systemd service
+sudo cp deploy/kiro-django-demo-app.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable panorbit
+sudo systemctl enable kiro-django-demo-app
 
-# 4. Copy Nginx config
-sudo cp /var/www/kiro-django-demo-app/deploy/nginx.conf /etc/nginx/sites-available/panorbit
-sudo ln -sf /etc/nginx/sites-available/panorbit /etc/nginx/sites-enabled/panorbit
-sudo rm -f /etc/nginx/sites-enabled/default   # remove default site
-sudo nginx -t
-sudo systemctl reload nginx
-
-# 5. Create .env file with real secrets
-nano /var/www/kiro-django-demo-app/.env
-# Paste contents from .env.example and fill in real values
-
-# 6. Allow ubuntu user to run deploy commands without password prompt
-sudo visudo
-# Add this line at the bottom:
-ubuntu ALL=(ALL) NOPASSWD: /bin/systemctl restart panorbit, /bin/systemctl reload nginx, /bin/systemctl status panorbit, /usr/bin/nginx, /bin/mkdir, /bin/chown, /usr/bin/rsync
+# 3. Allow ubuntu to manage the app service without a password prompt
+sudo tee /etc/sudoers.d/ubuntu-service > /dev/null <<'EOF'
+ubuntu ALL=(ALL) NOPASSWD: /bin/systemctl restart kiro-django-demo-app, /bin/systemctl is-active kiro-django-demo-app, /bin/systemctl status kiro-django-demo-app
+EOF
 ```
 
 ---
 
-## Step 1 — Install required Jenkins plugins
+## Step 1 — Add SSH Credential
 
-Go to: Jenkins → Manage Jenkins → Plugins → Available
-
-Install:
-- **Git plugin** (usually pre-installed)
-- **Pipeline** (usually pre-installed)
-- **SSH Agent Plugin**
-- **Credentials Binding Plugin**
-
----
-
-## Step 2 — Add SSH credential in Jenkins
-
-Since Jenkins agent IS the deployment server (same node), the pipeline runs
-directly on the machine — no SSH needed for deployment.
-The `jenkins-agent-ssh-key` credential is used for Jenkins agent connection only.
-
-Go to: Jenkins → Manage Jenkins → Credentials → (global) → Add Credentials
-
-| Field | Value |
-|---|---|
-| Kind | SSH Username with private key |
-| ID | `jenkins-agent-ssh-key` |
-| Username | `ubuntu` |
-| Private Key | paste the private key content |
+1. Go to **Manage Jenkins → Credentials → System → Global credentials**
+2. Click **Add Credentials**
+3. Fill in:
+   - Kind: `SSH Username with private key`
+   - ID: `jenkins-agent-ssh-key`
+   - Username: `ubuntu`
+   - Private Key: paste the private key for the ubuntu user
+4. Click **Save**
 
 ---
 
-## Step 3 — Create the Pipeline job
+## Step 2 — Create the Pipeline Job
 
-1. Go to: http://13.201.40.146:8080/
-2. Click **"New Item"**
-3. Enter name: `kiro-django-demo-app`
-4. Select **"Pipeline"** → click **OK**
+1. Click **New Item**
+2. Enter name: `kiro-django-demo-app`
+3. Select **Pipeline** → click **OK**
 
 ---
 
-## Step 4 — Configure the Pipeline job
+## Step 3 — Configure the Job
 
-### General section
-- ✅ Check **"GitHub project"**
+In the job configuration page:
+
+### General
+- ✅ Check **GitHub project**
 - Project URL: `https://github.com/shivududeshi/kiro-django-demo-app`
 
-### Build Triggers section
-- ✅ Check **"Poll SCM"**
-- Schedule: `H/5 * * * *`  ← checks GitHub every 5 minutes
-- OR set up a GitHub webhook (see Step 5)
-
-### Pipeline section
+### Pipeline
 - Definition: **Pipeline script from SCM**
 - SCM: **Git**
 - Repository URL: `https://github.com/shivududeshi/kiro-django-demo-app`
 - Branch: `*/master`
 - Script Path: `Jenkinsfile`
 
-Click **Save**.
+Click **Save**
 
 ---
 
-## Step 5 — (Optional) GitHub Webhook for instant builds
+## Step 4 — Run the Build
 
-Instead of polling, trigger builds instantly on every git push.
-
-1. Go to your GitHub repo → Settings → Webhooks → Add webhook
-2. Payload URL: `http://13.201.40.146:8080/github-webhook/`
-3. Content type: `application/json`
-4. Events: **Just the push event**
-5. Click **Add webhook**
-
-In Jenkins job → Build Triggers → ✅ **GitHub hook trigger for GITScm polling**
+1. Click **Build Now**
+2. Click the build number → **Console Output** to watch live
 
 ---
 
-## Step 6 — Run the pipeline
+## Expected Console Output
 
-1. Go to job: `kiro-django-demo-app`
-2. Click **"Build Now"**
-3. Click the build number → **Console Output** to watch live logs
+```
+>>> Checking out source code from GitHub...
+>>> Creating virtual environment...
+>>> Installing requirements...
+>>> Running Django system check...
+System check identified no issues (0 silenced).
+>>> [1/4] Copying code to /var/www/kiro-django-demo-app...
+>>> [2/4] Installing dependencies...
+>>> [3/4] Restarting application service...
+>>> [4/4] Verifying application is running...
+✅ Service kiro-django-demo-app is running
+>>> Deployment complete — app accessible at http://<server-ip>:8000
+```
 
-Expected output:
-```
->>> Checking out source code from GitHub...   ✅
->>> Dependencies installed successfully        ✅
->>> Running Django system check...             ✅
->>> Deploying application...                   ✅
-  [1/6] Syncing code...
-  [2/6] Setting ownership...
-  [3/6] Installing dependencies...
-  [4/6] Running migrations...
-  [5/6] Restarting Gunicorn...
-  [6/6] Reloading Nginx...
-Deployment complete ✅
-App running at: http://13.201.40.146
-```
+Build result: **SUCCESS** ✅
 
 ---
 
-## Pipeline Flow Summary
+## Demo Success Checklist
 
-```
-Git push to master
-      ↓
-Jenkins detects change (webhook or poll)
-      ↓
-Stage 1: Get Code    — git checkout from GitHub
-      ↓
-Stage 2: Build       — pip install, django check, tests
-      ↓
-Stage 3: Deploy      — rsync code, migrate, collectstatic,
-                       restart Gunicorn, reload Nginx
-      ↓
-App live at http://13.201.40.146
-```
+| # | Check | How to verify |
+|---|-------|---------------|
+| 1 | Code checked out from GitHub | Stage `get_code` shows green |
+| 2 | Virtual environment created | Stage `build` shows green |
+| 3 | Dependencies installed | Stage `build` shows green |
+| 4 | App deployed | Stage `deploy` shows green |
+| 5 | App accessible on port 8000 | `curl http://<server-ip>:8000` returns HTML |
+| 6 | Build shows SUCCESS | Jenkins dashboard shows blue/green ball |
 
 ---
 
 ## Troubleshooting
 
+**Service fails to start**
 ```bash
-# Check Gunicorn status
-sudo systemctl status panorbit
+sudo systemctl status kiro-django-demo-app
+sudo journalctl -u kiro-django-demo-app -n 50
+```
 
-# View live app logs
-sudo journalctl -u panorbit -f
+**Permission denied on rsync/systemctl**
+```bash
+# Verify sudoers entry is correct
+sudo visudo -f /etc/sudoers.d/jenkins-deploy
+```
 
-# Check Nginx config
-sudo nginx -t
-
-# Check Nginx error logs
-sudo tail -f /var/log/nginx/error.log
-
-# Check Gunicorn logs
-sudo tail -f /var/log/panorbit/error.log
+**Django check fails**
+```bash
+# Run manually to see the error
+cd /var/www/kiro-django-demo-app
+./envs/bin/python manage.py check
 ```

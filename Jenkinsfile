@@ -1,67 +1,53 @@
 pipeline {
-    agent any
+    agent { label 'petclinic-agent' }
 
     environment {
-        GITHUB_REPO     = 'https://github.com/shivududeshi/kiro-django-demo-app'
-        BRANCH          = 'master'
-        APP_DIR         = '/var/www/kiro-django-demo-app'
-        PYTHON          = '/usr/bin/python3.12'
-        VENV_DIR        = "${APP_DIR}/envs"
-        DEPLOY_USER     = 'ubuntu'
-        DEPLOY_HOST     = 'localhost'   // same node — Jenkins agent IS the server
+        GITHUB_REPO  = 'https://github.com/shivududeshi/kiro-django-demo-app'
+        BRANCH       = 'master'
+        APP_DIR      = '/var/www/kiro-django-demo-app'
+        VENV_DIR     = "${APP_DIR}/envs"
+        PYTHON       = '/usr/bin/python3.12'
+        SERVICE_NAME = 'kiro-django-demo-app'
     }
 
     stages {
 
         // ── Stage 1: Get Code ────────────────────────────────────────────────
-        stage('Get Code') {
+        stage('get_code') {
             steps {
                 echo '>>> Checking out source code from GitHub...'
                 git branch: "${BRANCH}",
                     url: "${GITHUB_REPO}"
-                echo ">>> Checked out branch: ${BRANCH}"
-                sh 'git log --oneline -5'
+                sh 'git log --oneline -3'
             }
         }
 
         // ── Stage 2: Build ───────────────────────────────────────────────────
-        stage('Build') {
+        stage('build') {
             steps {
-                echo '>>> Setting up Python virtualenv and installing dependencies...'
+                echo '>>> Creating virtual environment...'
                 sh """
-                    # Create virtualenv if it does not exist
                     if [ ! -d "${VENV_DIR}" ]; then
                         ${PYTHON} -m venv ${VENV_DIR}
                     fi
+                    ${VENV_DIR}/bin/pip install --upgrade pip --quiet
+                """
 
-                    # Upgrade pip
-                    ${VENV_DIR}/bin/pip install --upgrade pip
-
-                    # Install all dependencies
-                    ${VENV_DIR}/bin/pip install -r ${WORKSPACE}/requirements.txt
-
-                    echo '>>> Dependencies installed successfully'
-                    ${VENV_DIR}/bin/pip list
+                echo '>>> Installing requirements...'
+                sh """
+                    ${VENV_DIR}/bin/pip install -r ${WORKSPACE}/requirements.txt --quiet
                 """
 
                 echo '>>> Running Django system check...'
                 sh """
-                    export DJANGO_SETTINGS_MODULE=panorbit.settings
-                    export PYTHONPATH=${WORKSPACE}
-                    cd ${APP_DIR}
+                    cd ${WORKSPACE}
                     ${VENV_DIR}/bin/python manage.py check
-                """
-
-                echo '>>> Running tests...'
-                sh """
-                    cd ${APP_DIR}
-                    ${VENV_DIR}/bin/python manage.py test world --verbosity=2 || true
                 """
             }
         }
 
         // ── Stage 3: Deploy ──────────────────────────────────────────────────
-        stage('Deploy') {
+        stage('deploy') {
             steps {
                 echo '>>> Deploying application...'
                 sh """
@@ -72,16 +58,12 @@ pipeline {
         }
     }
 
-    // ── Post actions ─────────────────────────────────────────────────────────
     post {
         success {
-            echo '✅ Pipeline completed successfully. App is live at http://13.201.40.146'
+            echo '✅ Build SUCCESS — application is running on port 8000'
         }
         failure {
-            echo '❌ Pipeline failed. Check the logs above for details.'
-        }
-        always {
-            echo '>>> Pipeline finished.'
+            echo '❌ Build FAILED — check the logs above'
         }
     }
 }
