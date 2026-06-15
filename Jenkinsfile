@@ -60,6 +60,32 @@ pipeline {
                 // Ensure docker network exists
                 sh 'docker network inspect ${NETWORK} >/dev/null 2>&1 || docker network create ${NETWORK}'
 
+                // ── Start MySQL if not already running ──────────────────────
+                sh """
+                    if docker ps --format "{{.Names}}" | grep -q "^mysql\$"; then
+                        echo "MySQL container already running — skipping start"
+                    else
+                        docker stop mysql 2>/dev/null || true
+                        docker rm   mysql 2>/dev/null || true
+                        docker run -d \\
+                            --name mysql \\
+                            --network ${NETWORK} \\
+                            -e MYSQL_ROOT_PASSWORD=rootpassword \\
+                            -e MYSQL_DATABASE=world \\
+                            -e MYSQL_USER=petclinic \\
+                            -e MYSQL_PASSWORD=petclinic \\
+                            --restart unless-stopped \\
+                            mysql:8.0
+                        echo "Waiting for MySQL to be ready..."
+                        for i in \$(seq 1 24); do
+                            docker exec mysql mysqladmin ping -h localhost -u root --password=rootpassword --silent 2>/dev/null \\
+                                && echo "MySQL is ready" && break
+                            echo "  Attempt \$i — MySQL not ready yet..."
+                            sleep 5
+                        done
+                    fi
+                """
+
                 // Write .env file for the container
                 sh '''
                     cat > /tmp/django-demo.env <<EOF
@@ -78,7 +104,7 @@ EMAIL_HOST_PASSWORD=lbfs camj axvt akdj
 EOF
                 '''
 
-                // Run new container joining petclinic-net
+                // Run new container joining django-net
                 sh """
                     docker run -d \\
                         --name ${CONTAINER_NAME} \\
