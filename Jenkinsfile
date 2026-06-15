@@ -86,6 +86,20 @@ pipeline {
                     fi
                 """
 
+                // ── Load world database schema + data if tables don't exist ──
+                sh """
+                    TABLE_EXISTS=\$(docker exec mysql mysql -u root --password=rootpassword -e \
+                        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='world' AND table_name='city';" \
+                        --skip-column-names 2>/dev/null || echo "0")
+                    if [ "\$TABLE_EXISTS" = "0" ] || [ "\$TABLE_EXISTS" = "" ]; then
+                        echo "Loading world.sql into MySQL..."
+                        docker exec -i mysql mysql -u root --password=rootpassword world < world.sql
+                        echo "world.sql loaded successfully"
+                    else
+                        echo "Tables already exist — skipping SQL import"
+                    fi
+                """
+
                 // Write .env file for the container
                 sh '''
                     cat > /tmp/django-demo.env <<EOF
