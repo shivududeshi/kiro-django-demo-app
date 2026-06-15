@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Jenkins Agent Node - Ubuntu 24.04 LTS t2.micro in office-work-vpc public subnet.
+  Uses the default ubuntu user with SSH-only connectivity from Jenkins server.
+  Installs Java, Git, Docker, Python3, and pip as Jenkins agent prerequisites.
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t2.micro
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: osi-test
+
+  VpcId:
+    Type: String
+    Default: vpc-0e65ede5c9c5b7122
+
+  SubnetId:
+    Type: String
+    Default: subnet-032a3a957920bad39   # office-work-subnet-public1-ap-south-1a
+
+  AmiId:
+    Type: String
+    Default: ami-006f82a1d5a27da54     # Ubuntu 24.04 LTS (ap-south-1, 2026-06-10)
+
+Resources:
+
+  # ── Security Group ────────────────────────────────────────────────────────────
+  JenkinsNodeSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: jenkins-node-sg
+      GroupDescription: Allow SSH only - Jenkins server connects to this node via SSH
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH access for Jenkins server to connect as agent
+      Tags:
+        - Key: Name
+          Value: jenkins-node-sg
+
+  # ── EC2 Instance ──────────────────────────────────────────────────────────────
+  JenkinsNodeInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      ImageId: !Ref AmiId
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !Ref JenkinsNodeSG
+      Tags:
+        - Key: Name
+          Value: test-nodenote
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -e
+          exec > /var/log/jenkins-node-setup.log 2>&1
+
+          echo "=== Updating system packages ==="
+          apt-get update -y
+          apt-get upgrade -y
+
+          echo "=== Installing Java 17 (required for Jenkins agent) ==="
+          apt-get install -y openjdk-17-jdk
+
+          echo "=== Installing Git ==="
+          apt-get install -y git
+
+          echo "=== Installing Python3 and pip ==="
+          apt-get install -y python3 python3-pip python3-venv python3-dev
+
+          echo "=== Installing build essentials ==="
+          apt-get install -y build-essential curl wget unzip
+
+          echo "=== Installing Docker ==="
+          apt-get install -y ca-certificates gnupg lsb-release
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+            | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          chmod a+r /etc/apt/keyrings/docker.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+            https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+            > /etc/apt/sources.list.d/docker.list
+          apt-get update -y
+          apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+          echo "=== Adding ubuntu user to docker group ==="
+          usermod -aG docker ubuntu
+
+          echo "=== Creating Jenkins workspace directory under ubuntu home ==="
+          mkdir -p /home/ubuntu/jenkins-workspace
+          chown ubuntu:ubuntu /home/ubuntu/jenkins-workspace
+
+          echo "=== Ensuring SSH directory exists for ubuntu user ==="
+          mkdir -p /home/ubuntu/.ssh
+          chmod 700 /home/ubuntu/.ssh
+          chown ubuntu:ubuntu /home/ubuntu/.ssh
+
+          echo "=== Enabling and starting Docker ==="
+          systemctl enable docker
+          systemctl start docker
+
+          echo "=== Verifying Java installation ==="
+          java -version
+
+          echo "=== Setup complete. Jenkins agent prerequisites installed. ==="
+
+Outputs:
+  InstanceId:
+    Description: EC2 Instance ID of the Jenkins node
+    Value: !Ref JenkinsNodeInstance
+
+  PublicIP:
+    Description: Public IP address of the Jenkins node
+    Value: !GetAtt JenkinsNodeInstance.PublicIp
+
+  PublicDNS:
+    Description: Public DNS of the Jenkins node
+    Value: !GetAtt JenkinsNodeInstance.PublicDnsName
+
+  SecurityGroupId:
+    Description: Security Group ID attached to the instance
+    Value: !Ref JenkinsNodeSG
