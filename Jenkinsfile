@@ -1,12 +1,12 @@
 pipeline {
 
-    agent { label 'petclinic-agent' }
+    agent { label 'test-nodenote' }
 
     environment {
         IMAGE_NAME     = 'django-demo-app'
         IMAGE_TAG      = 'latest'
         CONTAINER_NAME = 'django-demo-app'
-        NETWORK        = 'petclinic-net'
+        NETWORK        = 'django-net'
         HOST_PORT      = '8000'
         CONTAINER_PORT = '8000'
         REPO_URL       = 'https://github.com/shivududeshi/kiro-django-demo-app.git'
@@ -57,12 +57,15 @@ pipeline {
                 sh 'docker stop ${CONTAINER_NAME} 2>/dev/null || true'
                 sh 'docker rm   ${CONTAINER_NAME} 2>/dev/null || true'
 
+                // Ensure docker network exists
+                sh 'docker network inspect ${NETWORK} >/dev/null 2>&1 || docker network create ${NETWORK}'
+
                 // Write .env file for the container
                 sh '''
                     cat > /tmp/django-demo.env <<EOF
 DJANGO_SECRET_KEY=3xb%+*2uex+%1&\$@=*+(@^atnm!#tz-n&i5qn\$o46jnp&u*2l^
 DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=* 0.0.0.0 localhost 13.235.248.192
+DJANGO_ALLOWED_HOSTS=* 0.0.0.0 localhost 13.232.233.36
 DB_NAME=world
 DB_USER=petclinic
 DB_PASSWORD=petclinic
