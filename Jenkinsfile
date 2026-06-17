@@ -117,22 +117,21 @@ pipeline {
                 """
 
                 // Write .env file for the container
-                sh '''
-                    cat > /tmp/django-demo.env <<EOF
-DJANGO_SECRET_KEY=3xb%+*2uex+%1&\$@=*+(@^atnm!#tz-n&i5qn\$o46jnp&u*2l^
-DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=* 0.0.0.0 localhost 13.207.196.227
-DB_NAME=world
-DB_USER=petclinic
-DB_PASSWORD=petclinic
-DB_HOST=mysql
-DB_PORT=3306
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_HOST_USER=shivas.shiva01012000@gmail.com
-EMAIL_HOST_PASSWORD=lbfs camj axvt akdj
-EOF
-                '''
+                sh """
+                    printf 'DJANGO_SECRET_KEY=3xb%%+*2uex+%%1&\$@=*+(@^atnm!#tz-n&i5qn\$o46jnp&u*2l^\n' > /tmp/django-demo.env
+                    printf 'DJANGO_DEBUG=True\n' >> /tmp/django-demo.env
+                    printf 'DJANGO_ALLOWED_HOSTS=* 0.0.0.0 localhost 13.207.196.227\n' >> /tmp/django-demo.env
+                    printf 'DB_NAME=world\n' >> /tmp/django-demo.env
+                    printf 'DB_USER=petclinic\n' >> /tmp/django-demo.env
+                    printf 'DB_PASSWORD=petclinic\n' >> /tmp/django-demo.env
+                    printf 'DB_HOST=mysql\n' >> /tmp/django-demo.env
+                    printf 'DB_PORT=3306\n' >> /tmp/django-demo.env
+                    printf 'EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend\n' >> /tmp/django-demo.env
+                    printf 'EMAIL_HOST=smtp.gmail.com\n' >> /tmp/django-demo.env
+                    printf 'EMAIL_HOST_USER=shivas.shiva01012000@gmail.com\n' >> /tmp/django-demo.env
+                    printf 'EMAIL_HOST_PASSWORD=lbfs camj axvt akdj\n' >> /tmp/django-demo.env
+                    echo ".env file written"
+                """
 
                 // Run new container joining django-net
                 sh """
