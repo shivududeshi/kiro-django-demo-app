@@ -105,7 +105,7 @@ pipeline {
                     cat > /tmp/django-demo.env <<EOF
 DJANGO_SECRET_KEY=3xb%+*2uex+%1&\$@=*+(@^atnm!#tz-n&i5qn\$o46jnp&u*2l^
 DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=* 0.0.0.0 localhost 13.201.90.114
+DJANGO_ALLOWED_HOSTS=* 0.0.0.0 localhost 13.232.24.60
 DB_NAME=world
 DB_USER=petclinic
 DB_PASSWORD=petclinic
