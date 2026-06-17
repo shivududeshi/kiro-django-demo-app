@@ -120,7 +120,7 @@ pipeline {
                 sh """
                     printf 'DJANGO_SECRET_KEY=3xb%%+*2uex+%%1&\$@=*+(@^atnm!#tz-n&i5qn\$o46jnp&u*2l^\n' > /tmp/django-demo.env
                     printf 'DJANGO_DEBUG=True\n' >> /tmp/django-demo.env
-                    printf 'DJANGO_ALLOWED_HOSTS=* 0.0.0.0 localhost 13.207.196.227\n' >> /tmp/django-demo.env
+                    printf 'DJANGO_ALLOWED_HOSTS=* 0.0.0.0 localhost 13.233.206.151\n' >> /tmp/django-demo.env
                     printf 'DB_NAME=world\n' >> /tmp/django-demo.env
                     printf 'DB_USER=petclinic\n' >> /tmp/django-demo.env
                     printf 'DB_PASSWORD=petclinic\n' >> /tmp/django-demo.env
