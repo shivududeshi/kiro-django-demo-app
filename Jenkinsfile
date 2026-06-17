@@ -88,15 +88,31 @@ pipeline {
 
                 // ── Load world database schema + data if tables don't exist ──
                 sh """
-                    TABLE_EXISTS=\$(docker exec mysql mysql -u root --password=rootpassword -e \
-                        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='world' AND table_name='city';" \
-                        --skip-column-names 2>/dev/null || echo "0")
+                    # Extra wait: mysqladmin ping passes before grant tables are fully ready
+                    echo "Waiting 5s for MySQL auth to stabilise..."
+                    sleep 5
+
+                    # Retry the table check up to 5 times in case auth is still warming up
+                    TABLE_EXISTS="0"
+                    for i in \$(seq 1 5); do
+                        RESULT=\$(docker exec mysql mysql -u root --password=rootpassword \
+                            --skip-column-names -e \
+                            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='world' AND table_name='city';" \
+                            2>/dev/null)
+                        if [ \$? -eq 0 ]; then
+                            TABLE_EXISTS="\${RESULT:-0}"
+                            break
+                        fi
+                        echo "  Auth not ready yet (attempt \$i) — retrying in 5s..."
+                        sleep 5
+                    done
+
                     if [ "\$TABLE_EXISTS" = "0" ] || [ "\$TABLE_EXISTS" = "" ]; then
                         echo "Loading world.sql into MySQL..."
                         docker exec -i mysql mysql -u root --password=rootpassword world < world.sql
                         echo "world.sql loaded successfully"
                     else
-                        echo "Tables already exist — skipping SQL import"
+                        echo "Tables already exist (count=\$TABLE_EXISTS) — skipping SQL import"
                     fi
                 """
 
