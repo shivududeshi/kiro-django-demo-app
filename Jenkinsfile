@@ -145,7 +145,8 @@ pipeline {
                 """
 
                 // Run Django migrations (creates django_session, auth tables, etc.)
-                sh 'docker exec ${CONTAINER_NAME} python manage.py migrate --noinput'
+                // --fake-initial skips tables that already exist (e.g. loaded via world.sql)
+                sh 'docker exec ${CONTAINER_NAME} python manage.py migrate --noinput --fake-initial'
 
                 // Rebuild Whoosh search index so search returns results
                 sh 'docker exec ${CONTAINER_NAME} python manage.py rebuild_index --noinput'
